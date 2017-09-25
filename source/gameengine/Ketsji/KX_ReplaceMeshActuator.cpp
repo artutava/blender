@@ -90,7 +90,7 @@ PyObject *KX_ReplaceMeshActuator::pyattr_get_mesh(EXP_PyObjectPlus *self, const 
 	KX_ReplaceMeshActuator* actuator = static_cast<KX_ReplaceMeshActuator*>(self);
 	if (!actuator->m_mesh)
 		Py_RETURN_NONE;
-	KX_MeshProxy* meshproxy = new KX_MeshProxy(actuator->m_mesh);
+	KX_MeshProxy* meshproxy = new KX_MeshProxy(actuator->m_mesh, actuator->m_scene);
 	return meshproxy->NewProxy(true);
 }
 

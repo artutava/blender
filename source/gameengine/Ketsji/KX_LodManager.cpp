@@ -120,7 +120,7 @@ KX_LodManager::KX_LodManager(Object *ob, KX_Scene *scene, BL_BlenderSceneConvert
 				flag |= KX_LodLevel::USE_MATERIAL;
 			}
 			KX_LodLevel *lodLevel = new KX_LodLevel(lod->distance, lod->obhysteresis, level++,
-				BL_ConvertMesh(lodmesh, lodmatob, scene, converter), flag);
+				BL_ConvertMesh(lodmesh, lodmatob, scene, converter), scene, flag);
 
 			m_levels.push_back(lodLevel);
 		}

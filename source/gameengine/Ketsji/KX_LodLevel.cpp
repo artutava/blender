@@ -27,12 +27,13 @@
 #include "KX_LodLevel.h"
 #include "KX_MeshProxy.h"
 
-KX_LodLevel::KX_LodLevel(float distance, float hysteresis, unsigned short level, RAS_MeshObject *meshobj, unsigned short flag)
+KX_LodLevel::KX_LodLevel(float distance, float hysteresis, unsigned short level, RAS_MeshObject *meshobj, KX_Scene *scene, unsigned short flag)
 	:m_distance(distance),
 	m_hysteresis(hysteresis),
 	m_level(level),
 	m_flags(flag),
-	m_meshobj(meshobj)
+	m_meshobj(meshobj),
+	m_scene(scene)
 {
 }
 
@@ -112,7 +113,7 @@ PyAttributeDef KX_LodLevel::Attributes[] = {
 PyObject *KX_LodLevel::pyattr_get_mesh(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_LodLevel *self = static_cast<KX_LodLevel *>(self_v);
-	KX_MeshProxy *meshproxy = new KX_MeshProxy(self->GetMesh());
+	KX_MeshProxy *meshproxy = new KX_MeshProxy(self->GetMesh(), self->m_scene);
 	return meshproxy->NewProxy(true);
 }
 

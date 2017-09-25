@@ -718,7 +718,7 @@ static PyObject *gLibNew(PyObject *, PyObject *args)
 			if (name) {
 				RAS_MeshObject *meshobj= converter->ConvertMeshSpecial(kx_scene, maggie, name);
 				if (meshobj) {
-					KX_MeshProxy* meshproxy = new KX_MeshProxy(meshobj);
+					KX_MeshProxy* meshproxy = new KX_MeshProxy(meshobj, kx_scene);
 					item= meshproxy->NewProxy(true);
 					PyList_Append(ret, item);
 					Py_DECREF(item);

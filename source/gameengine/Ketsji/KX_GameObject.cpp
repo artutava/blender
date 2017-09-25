@@ -3096,16 +3096,16 @@ int KX_GameObject::pyattr_set_state(EXP_PyObjectPlus *self_v, const EXP_PYATTRIB
 
 PyObject *KX_GameObject::pyattr_get_meshes(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
 {
-	KX_GameObject* self = static_cast<KX_GameObject*>(self_v);
-	PyObject *meshes= PyList_New(self->m_meshes.size());
-	int i;
-	
-	for (i=0; i < (int)self->m_meshes.size(); i++)
-	{
-		KX_MeshProxy* meshproxy = new KX_MeshProxy(self->m_meshes[i]);
+	KX_GameObject *self = static_cast<KX_GameObject *>(self_v);
+	const unsigned short count = self->m_meshes.size();
+	KX_Scene *scene = self->GetScene();
+
+	PyObject *meshes = PyList_New(count);
+	for (unsigned short i = 0; i < count; ++i) {
+		KX_MeshProxy *meshproxy = new KX_MeshProxy(self->m_meshes[i], scene);
 		PyList_SET_ITEM(meshes, i, meshproxy->NewProxy(true));
 	}
-	
+
 	return meshes;
 }
 
@@ -4071,7 +4071,7 @@ EXP_PYMETHODDEF_DOC(KX_GameObject, rayCast,
 			{
 				if (callback.m_hitMesh)
 				{
-					KX_MeshProxy *meshProxy = new KX_MeshProxy(callback.m_hitMesh);
+					KX_MeshProxy *meshProxy = new KX_MeshProxy(callback.m_hitMesh, GetScene());
 					// if this field is set, then we can trust that m_hitPolygon is a valid polygon
 					const RAS_MeshObject::PolygonInfo polygon = callback.m_hitMesh->GetPolygon(callback.m_hitPolygon);
 					KX_PolyProxy *polyproxy = new KX_PolyProxy(meshProxy, callback.m_hitMesh, polygon);

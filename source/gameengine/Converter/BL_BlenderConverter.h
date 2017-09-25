@@ -131,6 +131,8 @@ public:
 
 	void RegisterInterpolatorList(KX_Scene *scene, BL_InterpolatorList *interpolator, bAction *for_act);
 	BL_InterpolatorList *FindInterpolatorList(KX_Scene *scene, bAction *for_act);
+	/// Register a mesh object copy.
+	void RegisterMesh(KX_Scene *scene, RAS_MeshObject *mesh);
 
 	Scene *GetBlenderSceneForName(const std::string& name);
 	EXP_ListValue<EXP_StringValue> *GetInactiveSceneNames();

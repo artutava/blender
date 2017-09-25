@@ -30,6 +30,8 @@
 #include "EXP_Value.h"
 #include "RAS_MeshObject.h"
 
+class KX_Scene;
+
 class KX_LodLevel : public EXP_Value
 {
 	Py_Header
@@ -39,9 +41,10 @@ private:
 	short m_level;
 	unsigned short m_flags;
 	RAS_MeshObject *m_meshobj;
+	KX_Scene *m_scene;
 
 public:
-	KX_LodLevel(float distance, float hysteresis, unsigned short level, RAS_MeshObject *meshobj, unsigned short flag);
+	KX_LodLevel(float distance, float hysteresis, unsigned short level, RAS_MeshObject *meshobj, KX_Scene *scene, unsigned short flag);
 	virtual ~KX_LodLevel();
 
 	virtual std::string GetName();

@@ -38,6 +38,7 @@
 
 class RAS_MeshObject;
 class SCA_LogicManager;
+class KX_Scene;
 
 // utility conversion function
 bool ConvertPythonToMesh(SCA_LogicManager *logicmgr, PyObject *value, RAS_MeshObject **object, bool py_none_ok, const char *error_prefix);
@@ -47,9 +48,10 @@ class KX_MeshProxy : public EXP_Value
 	Py_Header
 
 	RAS_MeshObject *m_meshobj;
+	KX_Scene *m_scene;
 
 public:
-	KX_MeshProxy(RAS_MeshObject *mesh);
+	KX_MeshProxy(RAS_MeshObject *mesh, KX_Scene *scene);
 	virtual ~KX_MeshProxy();
 
 	virtual RAS_MeshObject *GetMesh()
@@ -62,10 +64,8 @@ public:
 
 	// stuff for python integration
 
-	EXP_PYMETHOD(KX_MeshProxy, GetNumMaterials);  // Deprecated
 	EXP_PYMETHOD(KX_MeshProxy, GetMaterialName);
 	EXP_PYMETHOD(KX_MeshProxy, GetTextureName);
-	EXP_PYMETHOD_NOARGS(KX_MeshProxy, GetNumPolygons); // Deprecated
 
 	// both take materialid (int)
 	EXP_PYMETHOD(KX_MeshProxy, GetVertexArrayLength);
@@ -74,6 +74,7 @@ public:
 	EXP_PYMETHOD(KX_MeshProxy, Transform);
 	EXP_PYMETHOD(KX_MeshProxy, TransformUV);
 	EXP_PYMETHOD(KX_MeshProxy, ReplaceMaterial);
+	EXP_PYMETHOD_NOARGS(KX_MeshProxy, Copy);
 
 	static PyObject *pyattr_get_materials(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static PyObject *pyattr_get_numMaterials(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);

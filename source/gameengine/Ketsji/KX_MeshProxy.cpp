@@ -34,6 +34,11 @@
 
 #include "KX_MeshProxy.h"
 #include "KX_Scene.h"
+#include "KX_Globals.h"
+#include "KX_KetsjiEngine.h"
+
+#include "BL_BlenderConverter.h"
+
 #include "RAS_IPolygonMaterial.h"
 #include "RAS_DisplayArray.h"
 #include "RAS_MeshObject.h"
@@ -83,6 +88,7 @@ PyMethodDef KX_MeshProxy::Methods[] = {
 	{"transform", (PyCFunction) KX_MeshProxy::sPyTransform, METH_VARARGS},
 	{"transformUV", (PyCFunction) KX_MeshProxy::sPyTransformUV, METH_VARARGS},
 	{"replaceMaterial", (PyCFunction) KX_MeshProxy::sPyReplaceMaterial, METH_VARARGS},
+	{"copy", (PyCFunction) KX_MeshProxy::sPyCopy, METH_NOARGS},
 	{nullptr, nullptr} //Sentinel
 };
 
@@ -95,9 +101,9 @@ PyAttributeDef KX_MeshProxy::Attributes[] = {
 	EXP_PYATTRIBUTE_NULL    //Sentinel
 };
 
-KX_MeshProxy::KX_MeshProxy(RAS_MeshObject *mesh)
-	:EXP_Value(),
-	m_meshobj(mesh)
+KX_MeshProxy::KX_MeshProxy(RAS_MeshObject *mesh, KX_Scene *scene)
+	:m_meshobj(mesh),
+	m_scene(scene)
 {
 }
 
@@ -361,6 +367,18 @@ PyObject *KX_MeshProxy::PyReplaceMaterial(PyObject *args, PyObject *kwds)
 	meshmat->ReplaceMaterial(bucket);
 
 	Py_RETURN_NONE;
+}
+
+PyObject *KX_MeshProxy::PyCopy()
+{
+	RAS_MeshObject *dupli = new RAS_MeshObject(*m_meshobj);
+	// Create bounding box.
+	dupli->EndConversion(m_scene->GetBoundingBoxManager());
+
+	// Transfer owning to converter.
+	KX_GetActiveEngine()->GetConverter()->RegisterMesh(m_scene, dupli);
+
+	return (new KX_MeshProxy(dupli, m_scene))->NewProxy(true);
 }
 
 PyObject *KX_MeshProxy::pyattr_get_materials(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
