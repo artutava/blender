@@ -6,6 +6,7 @@
 #include "RAS_IDisplayArray.h"
 
 class KX_BlenderMaterial;
+class KX_Scene;
 
 class KX_MeshBuilderSlot : public EXP_Value
 {
@@ -48,8 +49,10 @@ class KX_MeshBuilder : public EXP_Value
 private:
 	EXP_ListValue<KX_MeshBuilderSlot> m_slots;
 
+	KX_Scene *m_scene;
+
 public:
-	KX_MeshBuilder();
+	KX_MeshBuilder(KX_Scene *scene);
 	~KX_MeshBuilder();
 
 	virtual std::string GetName();

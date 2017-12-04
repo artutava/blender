@@ -1,5 +1,6 @@
 #include "KX_MeshBuilder.h"
 #include "KX_BlenderMaterial.h"
+#include "KX_Scene.h"
 #include "KX_PyMath.h"
 
 KX_MeshBuilderSlot::KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType,
@@ -16,7 +17,7 @@ KX_MeshBuilderSlot::~KX_MeshBuilderSlot()
 
 std::string KX_MeshBuilderSlot::GetName()
 {
-	return m_material->GetName();
+	return m_material->GetName().substr(2);
 }
 
 KX_BlenderMaterial *KX_MeshBuilderSlot::GetMaterial() const
@@ -169,41 +170,56 @@ PyObject *KX_MeshBuilderSlot::PyAddVertex(PyObject *args, PyObject *kwds)
 	}
 
 	RAS_Vertex vert = m_displayArray->CreateVertex(pos, uvs, tangent, colors, normal);
-	m_displayArray->AddVertex(vert);
+	const unsigned int index = m_displayArray->AddVertex(vert);
 	m_displayArray->DeleteVertexData(vert);
 
-	Py_RETURN_NONE;
+	return PyLong_FromLong(index);
 }
 
 PyObject *KX_MeshBuilderSlot::PyAddPrimitiveIndex(PyObject *value)
 {
-	const int val = PyLong_AsLong(value);
-
-	if (val < 0 && PyErr_Occurred()) {
-		PyErr_Format(PyExc_TypeError, "expected a positive integer");
+	if (!PySequence_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "expected a list");
 		return nullptr;
 	}
 
-	m_displayArray->AddPrimitiveIndex(val);
+	for (unsigned int i = 0, size = PySequence_Size(value); i < size; ++i) {
+		const int val = PyLong_AsLong(PySequence_GetItem(value, i));
+
+		if (val < 0 && PyErr_Occurred()) {
+			PyErr_Format(PyExc_TypeError, "expected a list of positive integer");
+			return nullptr;
+		}
+
+		m_displayArray->AddPrimitiveIndex(val);
+	}
 
 	Py_RETURN_NONE;
 }
 
 PyObject *KX_MeshBuilderSlot::PyAddTriangleIndex(PyObject *value)
 {
-	const int val = PyLong_AsLong(value);
-
-	if (val < 0 && PyErr_Occurred()) {
-		PyErr_Format(PyExc_TypeError, "expected a positive integer");
+	if (!PySequence_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "expected a list");
 		return nullptr;
 	}
 
-	m_displayArray->AddTriangleIndex(val);
+	for (unsigned int i = 0, size = PySequence_Size(value); i < size; ++i) {
+		const int val = PyLong_AsLong(PySequence_GetItem(value, i));
+
+		if (val < 0 && PyErr_Occurred()) {
+			PyErr_Format(PyExc_TypeError, "expected a list of positive integer");
+			return nullptr;
+		}
+
+		m_displayArray->AddTriangleIndex(val);
+	}
 
 	Py_RETURN_NONE;
 }
 
-KX_MeshBuilder::KX_MeshBuilder()
+KX_MeshBuilder::KX_MeshBuilder(KX_Scene *scene)
+	:m_scene(scene)
 {
 }
 
@@ -219,6 +235,23 @@ std::string KX_MeshBuilder::GetName()
 EXP_ListValue<KX_MeshBuilderSlot>& KX_MeshBuilder::GetSlots()
 {
 	return m_slots;
+}
+
+static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	PyObject *pyscene;
+	if (!PyArg_ParseTuple(args,"O:KX_MeshBuilder", &pyscene)) {
+		return nullptr;
+	}
+
+	KX_Scene *scene;
+	if (!ConvertPythonToScene(pyscene, &scene, false, "KX_MeshBuilder(scene): scene must be KX_Scene")) {
+		return nullptr;
+	}
+
+	KX_MeshBuilder *builder = new KX_MeshBuilder(scene);
+
+	return builder->NewProxy(true);
 }
 
 PyTypeObject KX_MeshBuilder::Type = {
@@ -240,7 +273,7 @@ PyTypeObject KX_MeshBuilder::Type = {
 	0,
 	&EXP_Value::Type,
 	0, 0, 0, 0, 0, 0,
-	py_base_new
+	py_new
 };
 
 PyMethodDef KX_MeshBuilder::Methods[] = {
@@ -260,15 +293,47 @@ PyObject *KX_MeshBuilder::pyattr_get_slots(EXP_PyObjectPlus *self_v, const EXP_P
 	return self->GetSlots().GetProxy();
 }
 
+static bool convertPythonListToLayers(PyObject *list, RAS_MeshObject::Layer::Type type, RAS_MeshObject::LayersInfo& LayersInfo,
+		const std::string& errmsg)
+{
+	if (!PySequence_Check(list)) {
+		PyErr_Format(PyExc_TypeError, "%s expected a list", errmsg.c_str());
+		return false;
+	}
+
+	const unsigned short size = PySequence_Size(list);
+	if (size > RAS_Vertex::MAX_UNIT) {
+		PyErr_Format(PyExc_TypeError, "%s excepted a list of maximum %i items", errmsg.c_str(), RAS_Vertex::MAX_UNIT);
+		return false;
+	}
+
+	for (unsigned short i = 0; i < size; ++i) {
+		PyObject *value = PySequence_GetItem(list, i);
+		if (value == Py_None) {
+			continue;
+		}
+
+		if (!PyUnicode_Check(value)) {
+			PyErr_Format(PyExc_TypeError, "%s excepted a list of string or None", errmsg.c_str());
+		}
+
+		const std::string name = std::string(_PyUnicode_AsString(value));
+		layersInfo.layers.push_back({type, i, name});
+		
+	}
+
+	return true;
+}
+
 PyObject *KX_MeshBuilder::PyAddSlot(PyObject *args, PyObject *kwds)
 {
 	PyObject *pymat;
 	int primitive;
-	int uvCount;
-	int colorCount;
+	PyObject *pyuvs;
+	PyObject *pycolors;
 
 	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "O|iii:addSlot",
-			{"material", "primitive", "uvCount", "colorCount", 0},
+			{"material", "primitive", "uvs", "colors", 0},
 			&pymat, &primitive, &uvCount, &colorCount))
 	{
 		return nullptr;
@@ -282,6 +347,10 @@ PyObject *KX_MeshBuilder::PyAddSlot(PyObject *args, PyObject *kwds)
 	if (!ELEM(primitive, RAS_IDisplayArray::LINES, RAS_IDisplayArray::TRIANGLES)) {
 		PyErr_SetString(PyExc_TypeError, "meshBuilder.addSlot: primitive value invalid");
 		return nullptr;
+	}
+
+	if (!PySequence_Check(pyuvs) || !PySequence_Check(pycolors)) {
+		
 	}
 
 	if (uvCount < 1 || uvCount > 8 || colorCount < 1 || colorCount > 8) {
@@ -298,6 +367,8 @@ PyObject *KX_MeshBuilder::PyAddSlot(PyObject *args, PyObject *kwds)
 
 PyObject *KX_MeshBuilder::PyFinish()
 {
+	// créer les layers info.
+
 	Py_RETURN_NONE;
 }
 
