@@ -1,7 +1,7 @@
 #ifndef __KX_MESH_BUILDER_H__
 #define __KX_MESH_BUILDER_H__
 
-#include "EXP_Value.h"
+#include "EXP_ListValue.h"
 
 #include "RAS_IDisplayArray.h"
 
@@ -16,7 +16,7 @@ private:
 	RAS_IDisplayArray *m_displayArray;
 
 public:
-	KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray *array);
+	KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType, const RAS_VertexFormat& format);
 	~KX_MeshBuilderSlot();
 
 	virtual std::string GetName();
@@ -34,16 +34,19 @@ public:
 	static PyObject *pyattr_get_colorCount(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static PyObject *pyattr_get_primitive(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 
-	EXP_PYMETHOD(KX_MeshBuilderSlot, addVertex);
-	EXP_PYMETHOD_O(KX_MeshBuilderSlot, addIndex);
+	EXP_PYMETHOD(KX_MeshBuilderSlot, AddVertex);
+	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddPrimitiveIndex);
+	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddTriangleIndex);
 
 #endif  // WITH_PYTHON
 };
 
 class KX_MeshBuilder : public EXP_Value
 {
+	Py_Header
+
 private:
-	std::vector<KX_MeshBuilderSlot *> m_slots;
+	EXP_ListValue<KX_MeshBuilderSlot> m_slots;
 
 public:
 	KX_MeshBuilder();
@@ -51,12 +54,14 @@ public:
 
 	virtual std::string GetName();
 
+	EXP_ListValue<KX_MeshBuilderSlot>& GetSlots();
+
 #ifdef WITH_PYTHON
 
 	static PyObject *pyattr_get_slots(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 
-	EXP_PYMETHOD(KX_MeshBuilder, addSlot);
-	EXP_PYMETHOD_NOARGS(KX_MeshBuilder, finish);
+	EXP_PYMETHOD(KX_MeshBuilder, AddSlot);
+	EXP_PYMETHOD_NOARGS(KX_MeshBuilder, Finish);
 
 #endif  // WITH_PYTHON
 };

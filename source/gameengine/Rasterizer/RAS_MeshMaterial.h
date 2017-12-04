@@ -56,6 +56,7 @@ private:
 
 public:
 	RAS_MeshMaterial(RAS_MeshObject *mesh, RAS_MaterialBucket *bucket, unsigned int index, const RAS_VertexFormat& format);
+	RAS_MeshMaterial(RAS_MeshObject *mesh, RAS_MaterialBucket *bucket, unsigned int index, RAS_IDisplayArray *array);
 	~RAS_MeshMaterial();
 
 	unsigned int GetIndex() const;

@@ -35,6 +35,14 @@ RAS_MeshMaterial::RAS_MeshMaterial(RAS_MeshObject *mesh, RAS_MaterialBucket *buc
 	m_displayArrayBucket = new RAS_DisplayArrayBucket(bucket, m_displayArray, mesh, this, nullptr);
 }
 
+RAS_MeshMaterial::RAS_MeshMaterial(RAS_MeshObject *mesh, RAS_MaterialBucket *bucket, unsigned int index, RAS_IDisplayArray *array)
+	:m_bucket(bucket),
+	m_index(index),
+	m_displayArray(array)
+{
+	m_displayArrayBucket = new RAS_DisplayArrayBucket(bucket, m_displayArray, mesh, this, nullptr);
+}
+
 RAS_MeshMaterial::~RAS_MeshMaterial()
 {
 	delete m_displayArrayBucket;

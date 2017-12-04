@@ -448,9 +448,7 @@ RAS_MeshObject *BL_ConvertMesh(Mesh *me, Object *blenderobj, KX_Scene *scene, BL
 	}
 
 	// Initialize vertex format with used uv and color layers.
-	RAS_VertexFormat vertformat;
-	vertformat.uvSize = max_ii(1, uvCount);
-	vertformat.colorSize = max_ii(1, colorCount);
+	RAS_VertexFormat vertformat{(uint8_t)max_ii(1, uvCount), (uint8_t)max_ii(1, colorCount)};
 
 	meshobj = new RAS_MeshObject(me, layersInfo);
 
