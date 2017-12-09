@@ -1,9 +1,10 @@
 #ifndef __KX_MESH_BUILDER_H__
 #define __KX_MESH_BUILDER_H__
 
-#include "EXP_ListValue.h"
-
+#include "RAS_MeshObject.h"
 #include "RAS_IDisplayArray.h"
+
+#include "EXP_ListValue.h"
 
 class KX_BlenderMaterial;
 class KX_Scene;
@@ -48,11 +49,13 @@ class KX_MeshBuilder : public EXP_Value
 
 private:
 	EXP_ListValue<KX_MeshBuilderSlot> m_slots;
+	RAS_MeshObject::LayersInfo m_layersInfo;
+	RAS_VertexFormat m_format;
 
 	KX_Scene *m_scene;
 
 public:
-	KX_MeshBuilder(KX_Scene *scene);
+	KX_MeshBuilder(KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo, const RAS_VertexFormat& format);
 	~KX_MeshBuilder();
 
 	virtual std::string GetName();
@@ -63,7 +66,7 @@ public:
 
 	static PyObject *pyattr_get_slots(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 
-	EXP_PYMETHOD(KX_MeshBuilder, AddSlot);
+	EXP_PYMETHOD(KX_MeshBuilder, AddMaterial);
 	EXP_PYMETHOD_NOARGS(KX_MeshBuilder, Finish);
 
 #endif  // WITH_PYTHON

@@ -218,8 +218,10 @@ PyObject *KX_MeshBuilderSlot::PyAddTriangleIndex(PyObject *value)
 	Py_RETURN_NONE;
 }
 
-KX_MeshBuilder::KX_MeshBuilder(KX_Scene *scene)
-	:m_scene(scene)
+KX_MeshBuilder::KX_MeshBuilder(KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo, const RAS_VertexFormat& format)
+	:m_layersInfo(layersInfo),
+	m_format(format),
+	m_scene(scene)
 {
 }
 
@@ -237,19 +239,60 @@ EXP_ListValue<KX_MeshBuilderSlot>& KX_MeshBuilder::GetSlots()
 	return m_slots;
 }
 
+static bool convertPythonListToLayers(PyObject *list, RAS_MeshObject::LayerList& layers, const std::string& errmsg)
+{
+	if (!PySequence_Check(list)) {
+		PyErr_Format(PyExc_TypeError, "%s expected a list", errmsg.c_str());
+		return false;
+	}
+
+	const unsigned short size = PySequence_Size(list);
+	if (size > RAS_Vertex::MAX_UNIT) {
+		PyErr_Format(PyExc_TypeError, "%s excepted a list of maximum %i items", errmsg.c_str(), RAS_Vertex::MAX_UNIT);
+		return false;
+	}
+
+	for (unsigned short i = 0; i < size; ++i) {
+		PyObject *value = PySequence_GetItem(list, i);
+
+		if (!PyUnicode_Check(value)) {
+			PyErr_Format(PyExc_TypeError, "%s excepted a list of string", errmsg.c_str());
+		}
+
+		const std::string name = std::string(_PyUnicode_AsString(value));
+		layers.push_back({i, name});
+	}
+
+	return true;
+}
+
 static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyObject *pyscene;
-	if (!PyArg_ParseTuple(args,"O:KX_MeshBuilder", &pyscene)) {
+	PyObject *pyuvs;
+	PyObject *pycolors;
+
+	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "O|OO:KX_MeshBuilder",
+			{"scene", "uvs", "colors", 0}, &pyscene, &pyuvs, &pycolors))
+	{
 		return nullptr;
 	}
 
 	KX_Scene *scene;
-	if (!ConvertPythonToScene(pyscene, &scene, false, "KX_MeshBuilder(scene): scene must be KX_Scene")) {
+	if (!ConvertPythonToScene(pyscene, &scene, false, "KX_MeshBuilder(scene, uvs, colors): scene must be KX_Scene")) {
 		return nullptr;
 	}
 
-	KX_MeshBuilder *builder = new KX_MeshBuilder(scene);
+	RAS_MeshObject::LayersInfo layersInfo;
+	if (!convertPythonListToLayers(pyuvs, layersInfo.uvLayers, "KX_MeshBuilder(scene, uvs, colors): uvs:") ||
+		!convertPythonListToLayers(pycolors, layersInfo.colorLayers, "KX_MeshBuilder(scene, uvs, colors): colors:"))
+	{
+		return nullptr;
+	}
+
+	RAS_VertexFormat format{(uint8_t)layersInfo.uvLayers.size(), (uint8_t)layersInfo.colorLayers.size()};
+
+	KX_MeshBuilder *builder = new KX_MeshBuilder(scene, layersInfo, format);
 
 	return builder->NewProxy(true);
 }
@@ -277,7 +320,7 @@ PyTypeObject KX_MeshBuilder::Type = {
 };
 
 PyMethodDef KX_MeshBuilder::Methods[] = {
-	{"addSlot", (PyCFunction)KX_MeshBuilder::sPyAddSlot, METH_VARARGS | METH_KEYWORDS},
+	{"addMaterial", (PyCFunction)KX_MeshBuilder::sPyAddMaterial, METH_VARARGS | METH_KEYWORDS},
 	{"finish", (PyCFunction)KX_MeshBuilder::sPyFinish, METH_NOARGS},
 	{nullptr, nullptr} // Sentinel
 };
@@ -293,73 +336,26 @@ PyObject *KX_MeshBuilder::pyattr_get_slots(EXP_PyObjectPlus *self_v, const EXP_P
 	return self->GetSlots().GetProxy();
 }
 
-static bool convertPythonListToLayers(PyObject *list, RAS_MeshObject::Layer::Type type, RAS_MeshObject::LayersInfo& LayersInfo,
-		const std::string& errmsg)
-{
-	if (!PySequence_Check(list)) {
-		PyErr_Format(PyExc_TypeError, "%s expected a list", errmsg.c_str());
-		return false;
-	}
-
-	const unsigned short size = PySequence_Size(list);
-	if (size > RAS_Vertex::MAX_UNIT) {
-		PyErr_Format(PyExc_TypeError, "%s excepted a list of maximum %i items", errmsg.c_str(), RAS_Vertex::MAX_UNIT);
-		return false;
-	}
-
-	for (unsigned short i = 0; i < size; ++i) {
-		PyObject *value = PySequence_GetItem(list, i);
-		if (value == Py_None) {
-			continue;
-		}
-
-		if (!PyUnicode_Check(value)) {
-			PyErr_Format(PyExc_TypeError, "%s excepted a list of string or None", errmsg.c_str());
-		}
-
-		const std::string name = std::string(_PyUnicode_AsString(value));
-		layersInfo.layers.push_back({type, i, name});
-		
-	}
-
-	return true;
-}
-
-PyObject *KX_MeshBuilder::PyAddSlot(PyObject *args, PyObject *kwds)
+PyObject *KX_MeshBuilder::PyAddMaterial(PyObject *args, PyObject *kwds)
 {
 	PyObject *pymat;
 	int primitive;
-	PyObject *pyuvs;
-	PyObject *pycolors;
 
-	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "O|iii:addSlot",
-			{"material", "primitive", "uvs", "colors", 0},
-			&pymat, &primitive, &uvCount, &colorCount))
-	{
+	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "O|i:addMaterial", {"material", "primitive", 0}, &pymat, &primitive)) {
 		return nullptr;
 	}
 
 	KX_BlenderMaterial *material;
-	if (!ConvertPythonToMaterial(pymat, &material, false, "meshBuilder.addSlot: material must be a KX_BlenderMaterial")) {
+	if (!ConvertPythonToMaterial(pymat, &material, false, "meshBuilder.addMaterial(...): material must be a KX_BlenderMaterial")) {
 		return nullptr;
 	}
 
 	if (!ELEM(primitive, RAS_IDisplayArray::LINES, RAS_IDisplayArray::TRIANGLES)) {
-		PyErr_SetString(PyExc_TypeError, "meshBuilder.addSlot: primitive value invalid");
+		PyErr_SetString(PyExc_TypeError, "meshBuilder.addMaterial(...): primitive value invalid");
 		return nullptr;
 	}
 
-	if (!PySequence_Check(pyuvs) || !PySequence_Check(pycolors)) {
-		
-	}
-
-	if (uvCount < 1 || uvCount > 8 || colorCount < 1 || colorCount > 8) {
-		PyErr_SetString(PyExc_TypeError, "meshBuilder.addSlot: uv or color count invalid, must be in range [1, 8]");
-		return nullptr;
-	}
-
-	RAS_VertexFormat format{(uint8_t)uvCount, (uint8_t)colorCount};
-	KX_MeshBuilderSlot *slot = new KX_MeshBuilderSlot(material, (RAS_IDisplayArray::PrimitiveType)primitive, format);
+	KX_MeshBuilderSlot *slot = new KX_MeshBuilderSlot(material, (RAS_IDisplayArray::PrimitiveType)primitive, m_format);
 	m_slots.Add(slot);
 
 	return slot->GetProxy();
@@ -367,7 +363,10 @@ PyObject *KX_MeshBuilder::PyAddSlot(PyObject *args, PyObject *kwds)
 
 PyObject *KX_MeshBuilder::PyFinish()
 {
-	// créer les layers info.
+	RAS_MeshMaterialList materials;
+	for (KX_MeshBuilderSlot *slot : m_slots) {
+		RAS_MeshMaterial *material = new RAS_MeshMaterial() // mesh arg ??? trouver le bucket depuis la scene
+	}
 
 	Py_RETURN_NONE;
 }

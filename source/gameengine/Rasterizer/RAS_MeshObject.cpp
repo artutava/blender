@@ -51,6 +51,15 @@ RAS_MeshObject::RAS_MeshObject(Mesh *mesh, const LayersInfo& layersInfo)
 {
 }
 
+RAS_MeshObject::RAS_MeshObject(const std::string& name, const RAS_MeshMaterialList& materials, const LayersInfo& layersInfo)
+	:m_name(name),
+	m_layersInfo(layersInfo),
+	m_boundingBox(nullptr),
+	m_materials(materials),
+	m_mesh(nullptr)
+{
+}
+
 RAS_MeshObject::~RAS_MeshObject()
 {
 	for (RAS_MeshMaterial *meshmat : m_materials) {

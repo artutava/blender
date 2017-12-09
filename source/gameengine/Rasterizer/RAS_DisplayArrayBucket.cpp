@@ -55,7 +55,7 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 		RAS_MeshObject *mesh, RAS_MeshMaterial *meshmat, RAS_Deformer *deformer)
 	:m_bucket(bucket),
 	m_displayArray(array),
-	m_mesh(mesh),
+	m_mesh(mesh), // TODO remove
 	m_meshMaterial(meshmat),
 	m_deformer(deformer),
 	m_arrayStorage(nullptr),
@@ -161,7 +161,7 @@ void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_Rasterizer::DrawType draw
 
 		if (m_materialUpdateClient.GetInvalidAndClear()) {
 			RAS_IPolyMaterial *polymat = m_bucket->GetPolyMaterial();
-			const RAS_MeshObject::LayersInfo& layersInfo = m_mesh->GetLayersInfo();
+			const RAS_MeshObject::LayersInfo& layersInfo = m_mesh->GetLayersInfo(); // Passer en arg du constructeur ?
 			const RAS_AttributeArray::AttribList attribList = polymat->GetAttribs(layersInfo);
 
 			m_attribArray = RAS_AttributeArray(attribList, m_displayArray);

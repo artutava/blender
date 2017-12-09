@@ -132,8 +132,8 @@ protected:
 	Mesh *m_mesh;
 
 public:
-	// for now, meshes need to be in a certain layer (to avoid sorting on lights in realtime)
 	RAS_MeshObject(Mesh *mesh, const LayersInfo& layersInfo);
+	RAS_MeshObject(const std::string& name, const RAS_MeshMaterialList& materials, const LayersInfo& layersInfo);
 	virtual ~RAS_MeshObject();
 
 	// materials
