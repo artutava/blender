@@ -133,7 +133,7 @@ protected:
 
 public:
 	RAS_MeshObject(Mesh *mesh, const LayersInfo& layersInfo);
-	RAS_MeshObject(const std::string& name, const RAS_MeshMaterialList& materials, const LayersInfo& layersInfo);
+	RAS_MeshObject(const std::string& name, const LayersInfo& layersInfo);
 	virtual ~RAS_MeshObject();
 
 	// materials
@@ -155,8 +155,19 @@ public:
 		return m_mesh;
 	}
 
-	// mesh construction
+	/** Add a material with empty display array along given vertex format.
+	 * \param bucket Material bucket used to draw this mesh part.
+	 * \param index The blender material index in mesh.
+	 * \param format The vertex format used to initialize the display array.
+	 */
 	RAS_MeshMaterial *AddMaterial(RAS_MaterialBucket *bucket, unsigned int index, const RAS_VertexFormat& format);
+
+	/** Add a material with an already existing display array.
+	 * \param bucket Material bucket used to draw this mesh part.
+	 * \param index The blender material index in mesh.
+	 * \param array The display array used in the mesh material.
+	 */
+	RAS_MeshMaterial *AddMaterial(RAS_MaterialBucket *bucket, unsigned int index, RAS_IDisplayArray *array);
 
 	RAS_IDisplayArray *GetDisplayArray(unsigned int matid) const;
 

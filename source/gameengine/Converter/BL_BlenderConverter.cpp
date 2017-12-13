@@ -279,6 +279,12 @@ BL_InterpolatorList *BL_BlenderConverter::FindInterpolatorList(KX_Scene *scene, 
 	return m_sceneSlots[scene].m_actionToInterp[for_act];
 }
 
+void BL_BlenderConverter::RegisterMesh(KX_Scene* scene, RAS_MeshObject* mesh)
+{
+	scene->GetLogicManager()->RegisterMeshName(mesh->GetName(), mesh);
+	m_sceneSlots[scene].m_meshobjects.emplace_back(mesh);
+}
+
 Main *BL_BlenderConverter::CreateMainDynamic(const std::string& path)
 {
 	Main *maggie = BKE_main_new();

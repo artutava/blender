@@ -126,6 +126,7 @@ set(SRC
 	RAS_TextUser.h
 	RAS_Vertex.h
 	RAS_VertexData.h
+	RAS_VertexFactory.h
 	RAS_VertexFormat.h
 )
 

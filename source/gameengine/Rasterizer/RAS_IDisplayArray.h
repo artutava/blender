@@ -114,6 +114,9 @@ public:
 	 */
 	virtual RAS_Vertex GetVertexNoCache(const unsigned int index) = 0;
 
+	/// Return vertex data without using pointer cache.
+	virtual RAS_IVertexData *GetVertexData(const unsigned int index) = 0;
+
 	inline RAS_Vertex GetVertex(const unsigned int index)
 	{
 		return RAS_Vertex(m_vertexDataPtrs[index], m_format);
@@ -139,9 +142,7 @@ public:
 		return m_vertexInfos[index];
 	}
 
-	virtual unsigned int AddVertex(const RAS_Vertex& vert) = 0;
-
-	virtual void DeleteVertexData(const RAS_Vertex& vert) = 0;
+	virtual unsigned int AddVertexData(RAS_IVertexData *data) = 0;
 
 	inline void AddPrimitiveIndex(const unsigned int index)
 	{
@@ -187,20 +188,6 @@ public:
 
 	void SortPolygons(const mt::mat3x4& transform, unsigned int *indexmap);
 	void InvalidatePolygonCenters();
-
-	virtual RAS_Vertex CreateVertex(
-				const mt::vec3& xyz,
-				const mt::vec2 * const uvs,
-				const mt::vec4& tangent,
-				const unsigned int *rgba,
-				const mt::vec3& normal) = 0;
-
-	virtual RAS_Vertex CreateVertex(
-				const float xyz[3],
-				const float (*uvs)[2],
-				const float tangent[4],
-				const unsigned int *rgba,
-				const float normal[3]) = 0;
 
 	/** Copy vertex data from an other display array. Different vertex type is allowed.
 	 * \param other The other display array to copy from.

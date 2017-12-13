@@ -1,18 +1,25 @@
 #include "KX_MeshBuilder.h"
+#include "KX_MeshProxy.h"
 #include "KX_BlenderMaterial.h"
 #include "KX_Scene.h"
+#include "KX_KetsjiEngine.h"
+#include "KX_Globals.h"
 #include "KX_PyMath.h"
+
+#include "BL_BlenderConverter.h"
+
+#include "RAS_BucketManager.h"
 
 KX_MeshBuilderSlot::KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType,
 		const RAS_VertexFormat& format)
-	:m_material(material)
+	:m_material(material),
+	m_primitive(primitiveType),
+	m_factory(RAS_IVertexFactory::Construct(format))
 {
-	m_displayArray = RAS_IDisplayArray::ConstructArray(primitiveType, format);
 }
 
 KX_MeshBuilderSlot::~KX_MeshBuilderSlot()
 {
-	delete m_displayArray;
 }
 
 std::string KX_MeshBuilderSlot::GetName()
@@ -59,8 +66,11 @@ PyTypeObject KX_MeshBuilderSlot::Type = {
 
 PyMethodDef KX_MeshBuilderSlot::Methods[] = {
 	{"addVertex", (PyCFunction)KX_MeshBuilderSlot::sPyAddVertex, METH_VARARGS | METH_KEYWORDS},
+	{"removeVertex", (PyCFunction)KX_MeshBuilderSlot::sPyRemoveVertex, METH_VARARGS},
 	{"addPrimitiveIndex", (PyCFunction)KX_MeshBuilderSlot::sPyAddPrimitiveIndex, METH_O},
+	{"removePrimitiveIndex", (PyCFunction)KX_MeshBuilderSlot::sPyRemovePrimitiveIndex, METH_VARARGS},
 	{"addTriangleIndex", (PyCFunction)KX_MeshBuilderSlot::sPyAddTriangleIndex, METH_O},
+	{"removeTriangleIndex", (PyCFunction)KX_MeshBuilderSlot::sPyRemoveTriangleIndex, METH_VARARGS},
 	{nullptr, nullptr} // Sentinel
 };
 
@@ -320,7 +330,7 @@ PyTypeObject KX_MeshBuilder::Type = {
 };
 
 PyMethodDef KX_MeshBuilder::Methods[] = {
-	{"addMaterial", (PyCFunction)KX_MeshBuilder::sPyAddMaterial, METH_VARARGS | METH_KEYWORDS},
+	{"addMaterial", (PyCFunction)KX_MeshBuilder::sPyAddMaterial, METH_VARARGS | METH_KEYWORDS}, // TODO slot/material ?
 	{"finish", (PyCFunction)KX_MeshBuilder::sPyFinish, METH_NOARGS},
 	{nullptr, nullptr} // Sentinel
 };
@@ -363,11 +373,26 @@ PyObject *KX_MeshBuilder::PyAddMaterial(PyObject *args, PyObject *kwds)
 
 PyObject *KX_MeshBuilder::PyFinish()
 {
-	RAS_MeshMaterialList materials;
-	for (KX_MeshBuilderSlot *slot : m_slots) {
-		RAS_MeshMaterial *material = new RAS_MeshMaterial() // mesh arg ??? trouver le bucket depuis la scene
+	if (m_slots.GetCount() == 0) {
+		PyErr_SetString(PyExc_TypeError, "meshBuilder.finish(): no mesh data found");
+		return nullptr;
 	}
 
-	Py_RETURN_NONE;
+	// TODO name
+	RAS_MeshObject *mesh = new RAS_MeshObject("MeshBuilder", m_layersInfo);
+
+	RAS_BucketManager *bucketManager = m_scene->GetBucketManager();
+	for (unsigned short i = 0, size = m_slots.GetCount(); i < size; ++i) {
+		KX_MeshBuilderSlot *slot = m_slots.GetValue(i);
+		bool created;
+		RAS_MaterialBucket *bucket = bucketManager->FindBucket(slot->GetMaterial(), created);
+		mesh->AddMaterial(bucket, i, slot->GetDisplayArray()->GetReplica());
+	}
+
+	mesh->EndConversion(m_scene->GetBoundingBoxManager());
+
+	KX_GetActiveEngine()->GetConverter()->RegisterMesh(m_scene, mesh);
+
+	return (new KX_MeshProxy(mesh))->NewProxy(true);
 }
 

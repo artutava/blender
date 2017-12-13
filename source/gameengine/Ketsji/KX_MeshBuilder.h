@@ -2,6 +2,7 @@
 #define __KX_MESH_BUILDER_H__
 
 #include "RAS_MeshObject.h"
+#include "RAS_VertexFactory.h"
 #include "RAS_IDisplayArray.h"
 
 #include "EXP_ListValue.h"
@@ -15,7 +16,11 @@ class KX_MeshBuilderSlot : public EXP_Value
 
 private:
 	KX_BlenderMaterial *m_material;
-	RAS_IDisplayArray *m_displayArray;
+	RAS_IDisplayArray::PrimitiveType m_primitive;
+	std::unique_ptr<RAS_IVertexFactory> m_factory;
+
+	std::vector<RAS_IVertexData *> m_vertices;
+	std::vector<unsigned int> m_indices;
 
 public:
 	KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType, const RAS_VertexFormat& format);
@@ -26,6 +31,7 @@ public:
 	KX_BlenderMaterial *GetMaterial() const;
 	void SetMaterial(KX_BlenderMaterial *material);
 
+	/// Create a display array with data contained in this slot.
 	RAS_IDisplayArray *GetDisplayArray() const;
 
 #ifdef WITH_PYTHON
@@ -37,8 +43,11 @@ public:
 	static PyObject *pyattr_get_primitive(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 
 	EXP_PYMETHOD(KX_MeshBuilderSlot, AddVertex);
+	EXP_PYMETHOD(KX_MeshBuilderSlot, RemoveVertex);
 	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddPrimitiveIndex);
+	EXP_PYMETHOD(KX_MeshBuilderSlot, RemovePrimitiveIndex);
 	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddTriangleIndex);
+	EXP_PYMETHOD(KX_MeshBuilderSlot, RemoveTriangleIndex);
 
 #endif  // WITH_PYTHON
 };

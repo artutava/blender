@@ -38,6 +38,7 @@
 
 class RAS_Rasterizer;
 class RAS_ICanvas;
+class RAS_IVertexFactory;
 class KX_KetsjiEngine;
 class KX_Scene;
 class BL_BlenderSceneConverter;
@@ -48,6 +49,7 @@ struct Main;
 
 struct BL_MeshMaterial {
 	RAS_IDisplayArray *array;
+	RAS_IVertexFactory *vertexFactory;
 	RAS_MaterialBucket *bucket;
 	bool visible;
 	bool twoside;
