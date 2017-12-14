@@ -17,10 +17,12 @@ class KX_MeshBuilderSlot : public EXP_Value
 private:
 	KX_BlenderMaterial *m_material;
 	RAS_IDisplayArray::PrimitiveType m_primitive;
+	RAS_VertexFormat m_format;
 	std::unique_ptr<RAS_IVertexFactory> m_factory;
 
 	std::vector<RAS_IVertexData *> m_vertices;
-	std::vector<unsigned int> m_indices;
+	std::vector<unsigned int> m_primitiveIndices;
+	std::vector<unsigned int> m_triangleIndices;
 
 public:
 	KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType, const RAS_VertexFormat& format);
@@ -36,6 +38,9 @@ public:
 
 #ifdef WITH_PYTHON
 
+	static PyObject *pyattr_get_vertices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_primitiveIndices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_triangleIndices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static PyObject *pyattr_get_material(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static int pyattr_set_material(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 	static PyObject *pyattr_get_uvCount(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);

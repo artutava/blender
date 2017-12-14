@@ -84,7 +84,7 @@ RAS_IDisplayArray::~RAS_IDisplayArray()
 {
 }
 
-RAS_IDisplayArray *RAS_IDisplayArray::ConstructArray(RAS_IDisplayArray::PrimitiveType type, const RAS_VertexFormat &format)
+RAS_IDisplayArray *RAS_IDisplayArray::Construct(RAS_IDisplayArray::PrimitiveType type, const RAS_VertexFormat &format)
 {
 	return CM_InstantiateTemplateSwitch<RAS_IDisplayArray, RAS_DisplayArray, RAS_VertexFormatTuple>(format, type, format);
 }

@@ -14,7 +14,8 @@ KX_MeshBuilderSlot::KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDispla
 		const RAS_VertexFormat& format)
 	:m_material(material),
 	m_primitive(primitiveType),
-	m_factory(RAS_IVertexFactory::Construct(format))
+	m_format(format),
+	m_factory(RAS_IVertexFactory::Construct(m_format))
 {
 }
 
@@ -39,7 +40,7 @@ void KX_MeshBuilderSlot::SetMaterial(KX_BlenderMaterial *material)
 
 RAS_IDisplayArray *KX_MeshBuilderSlot::GetDisplayArray() const
 {
-	return m_displayArray;
+	return RAS_IDisplayArray::Construct();
 }
 
 PyTypeObject KX_MeshBuilderSlot::Type = {
@@ -75,6 +76,9 @@ PyMethodDef KX_MeshBuilderSlot::Methods[] = {
 };
 
 PyAttributeDef KX_MeshBuilderSlot::Attributes[] = {
+	EXP_PYATTRIBUTE_RO_FUNCTION("vertices", KX_MeshBuilderSlot, pyattr_get_vertices),
+	EXP_PYATTRIBUTE_RO_FUNCTION("primitiveIndices", KX_MeshBuilderSlot, pyattr_get_primitiveIndices),
+	EXP_PYATTRIBUTE_RO_FUNCTION("triangleIndices", KX_MeshBuilderSlot, pyattr_get_triangleIndices),
 	EXP_PYATTRIBUTE_RW_FUNCTION("material", KX_MeshBuilderSlot, pyattr_get_material, pyattr_set_material),
 	EXP_PYATTRIBUTE_RO_FUNCTION("uvCount", KX_MeshBuilderSlot, pyattr_get_uvCount),
 	EXP_PYATTRIBUTE_RO_FUNCTION("colorCount", KX_MeshBuilderSlot, pyattr_get_colorCount),
@@ -148,14 +152,13 @@ PyObject *KX_MeshBuilderSlot::PyAddVertex(PyObject *args, PyObject *kwds)
 		return nullptr;
 	}
 
-	const RAS_VertexFormat& format = m_displayArray->GetFormat();
 	mt::vec2 uvs[RAS_Vertex::MAX_UNIT] = {mt::zero2};
 	if (pyuvs) {
 		if (!PySequence_Check(pyuvs)) {
 			return nullptr;
 		}
 
-		const unsigned short size = max_ii(format.uvSize, PySequence_Size(pyuvs));
+		const unsigned short size = max_ii(m_format.uvSize, PySequence_Size(pyuvs));
 		for (unsigned short i = 0; i < size; ++i) {
 			if (!PyVecTo(PySequence_GetItem(pyuvs, i), uvs[i])) {
 				return nullptr;
@@ -169,7 +172,7 @@ PyObject *KX_MeshBuilderSlot::PyAddVertex(PyObject *args, PyObject *kwds)
 			return nullptr;
 		}
 
-		const unsigned short size = max_ii(format.colorSize, PySequence_Size(pycolors));
+		const unsigned short size = max_ii(m_format.colorSize, PySequence_Size(pycolors));
 		for (unsigned short i = 0; i < size; ++i) {
 			mt::vec4 color;
 			if (!PyVecTo(PySequence_GetItem(pycolors, i), color)) {
@@ -179,11 +182,10 @@ PyObject *KX_MeshBuilderSlot::PyAddVertex(PyObject *args, PyObject *kwds)
 		}
 	}
 
-	RAS_Vertex vert = m_displayArray->CreateVertex(pos, uvs, tangent, colors, normal);
-	const unsigned int index = m_displayArray->AddVertex(vert);
-	m_displayArray->DeleteVertexData(vert);
+	RAS_IVertexData *vert = m_factory->CreateVertex(pos, uvs, tangent, colors, normal);
+	m_vertices.push_back(vert);
 
-	return PyLong_FromLong(index);
+	return PyLong_FromLong(m_vertices.size() - 1);
 }
 
 PyObject *KX_MeshBuilderSlot::PyAddPrimitiveIndex(PyObject *value)
@@ -201,7 +203,7 @@ PyObject *KX_MeshBuilderSlot::PyAddPrimitiveIndex(PyObject *value)
 			return nullptr;
 		}
 
-		m_displayArray->AddPrimitiveIndex(val);
+		m_primitiveIndices.push_back(val);
 	}
 
 	Py_RETURN_NONE;
@@ -222,7 +224,7 @@ PyObject *KX_MeshBuilderSlot::PyAddTriangleIndex(PyObject *value)
 			return nullptr;
 		}
 
-		m_displayArray->AddTriangleIndex(val);
+		m_triangleIndices.push_back(val);
 	}
 
 	Py_RETURN_NONE;
@@ -386,7 +388,7 @@ PyObject *KX_MeshBuilder::PyFinish()
 		KX_MeshBuilderSlot *slot = m_slots.GetValue(i);
 		bool created;
 		RAS_MaterialBucket *bucket = bucketManager->FindBucket(slot->GetMaterial(), created);
-		mesh->AddMaterial(bucket, i, slot->GetDisplayArray()->GetReplica());
+		mesh->AddMaterial(bucket, i, slot->GetDisplayArray());
 	}
 
 	mesh->EndConversion(m_scene->GetBoundingBoxManager());

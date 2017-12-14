@@ -107,7 +107,11 @@ public:
 	 * \param type The type of primitives, one of the enumeration PrimitiveType.
 	 * \param format The format of vertex to use.
 	 */
-	static RAS_IDisplayArray *ConstructArray(PrimitiveType type, const RAS_VertexFormat &format);
+	static RAS_IDisplayArray *Construct(PrimitiveType type, const RAS_VertexFormat &format);
+
+	static RAS_IDisplayArray *Construct(PrimitiveType type, const RAS_VertexFormat &format,
+			const std::vector<RAS_IVertexData *>& vertices, const std::vector<unsigned int>& primitiveIndices,
+			const std::vector<unsigned int>& triangleIndices);
 
 	/** Return a vertex pointer without using the cache. Used to get
 	 * a vertex pointer during contruction.
