@@ -387,8 +387,10 @@ PyObject *KX_MeshBuilderSlot::PyRemoveTriangleIndex(PyObject *args)
 	return removeDataCheck(m_vertices, start, end, "slot.removeTriangleIndex(start, end)");
 }
 
-KX_MeshBuilder::KX_MeshBuilder(KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo, const RAS_VertexFormat& format)
-	:m_layersInfo(layersInfo),
+KX_MeshBuilder::KX_MeshBuilder(const std::string& name, KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo,
+		const RAS_VertexFormat& format)
+	:m_name(name),
+	m_layersInfo(layersInfo),
 	m_format(format),
 	m_scene(scene)
 {
@@ -400,7 +402,7 @@ KX_MeshBuilder::~KX_MeshBuilder()
 
 std::string KX_MeshBuilder::GetName()
 {
-	return "KX_MeshBuilder";
+	return m_name;
 }
 
 EXP_ListValue<KX_MeshBuilderSlot>& KX_MeshBuilder::GetSlots()
@@ -437,12 +439,13 @@ static bool convertPythonListToLayers(PyObject *list, RAS_MeshObject::LayerList&
 
 static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
+	const char *name;
 	PyObject *pyscene;
 	PyObject *pyuvs;
 	PyObject *pycolors;
 
-	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "O|OO:KX_MeshBuilder",
-			{"scene", "uvs", "colors", 0}, &pyscene, &pyuvs, &pycolors))
+	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "sO|OO:KX_MeshBuilder",
+			{"name", "scene", "uvs", "colors", 0}, &name, &pyscene, &pyuvs, &pycolors))
 	{
 		return nullptr;
 	}
@@ -461,7 +464,7 @@ static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 	RAS_VertexFormat format{(uint8_t)layersInfo.uvLayers.size(), (uint8_t)layersInfo.colorLayers.size()};
 
-	KX_MeshBuilder *builder = new KX_MeshBuilder(scene, layersInfo, format);
+	KX_MeshBuilder *builder = new KX_MeshBuilder(name, scene, layersInfo, format);
 
 	return builder->NewProxy(true);
 }
@@ -545,8 +548,7 @@ PyObject *KX_MeshBuilder::PyFinish()
 		}
 	}
 
-	// TODO name
-	RAS_MeshObject *mesh = new RAS_MeshObject("MeshBuilder", m_layersInfo);
+	RAS_MeshObject *mesh = new RAS_MeshObject(m_name, m_layersInfo);
 
 	RAS_BucketManager *bucketManager = m_scene->GetBucketManager();
 	for (unsigned short i = 0, size = m_slots.GetCount(); i < size; ++i) {

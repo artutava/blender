@@ -72,6 +72,8 @@ class KX_MeshBuilder : public EXP_Value
 	Py_Header
 
 private:
+	std::string m_name;
+
 	EXP_ListValue<KX_MeshBuilderSlot> m_slots;
 	RAS_MeshObject::LayersInfo m_layersInfo;
 	RAS_VertexFormat m_format;
@@ -79,7 +81,8 @@ private:
 	KX_Scene *m_scene;
 
 public:
-	KX_MeshBuilder(KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo, const RAS_VertexFormat& format);
+	KX_MeshBuilder(const std::string& name, KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo,
+			const RAS_VertexFormat& format);
 	~KX_MeshBuilder();
 
 	virtual std::string GetName();
