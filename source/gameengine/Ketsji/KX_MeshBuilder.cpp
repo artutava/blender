@@ -1,10 +1,13 @@
 #include "KX_MeshBuilder.h"
 #include "KX_MeshProxy.h"
+#include "KX_VertexProxy.h"
 #include "KX_BlenderMaterial.h"
 #include "KX_Scene.h"
 #include "KX_KetsjiEngine.h"
 #include "KX_Globals.h"
 #include "KX_PyMath.h"
+
+#include "EXP_ListWrapper.h"
 
 #include "BL_BlenderConverter.h"
 
@@ -38,9 +41,23 @@ void KX_MeshBuilderSlot::SetMaterial(KX_BlenderMaterial *material)
 	m_material = material;
 }
 
+bool KX_MeshBuilderSlot::Invalid() const
+{
+	// WARNING: Always respect the order from RAS_DisplayArray::PrimitiveType.
+	static const unsigned short itemsCount[] = {
+		3, // TRIANGLES
+		2 // LINES
+	};
+
+	const unsigned short count = itemsCount[m_primitive];
+	return ((m_vertices.size() % count) != 0 ||
+			(m_primitiveIndices.size() % count) != 0 ||
+			(m_triangleIndices.size() % count) != 0);
+}
+
 RAS_IDisplayArray *KX_MeshBuilderSlot::GetDisplayArray() const
 {
-	return RAS_IDisplayArray::Construct();
+	return RAS_IDisplayArray::Construct(m_primitive, m_format, m_vertices, m_primitiveIndices, m_triangleIndices);
 }
 
 PyTypeObject KX_MeshBuilderSlot::Type = {
@@ -67,6 +84,7 @@ PyTypeObject KX_MeshBuilderSlot::Type = {
 
 PyMethodDef KX_MeshBuilderSlot::Methods[] = {
 	{"addVertex", (PyCFunction)KX_MeshBuilderSlot::sPyAddVertex, METH_VARARGS | METH_KEYWORDS},
+	{"addIndex", (PyCFunction)KX_MeshBuilderSlot::sPyAddIndex, METH_O},
 	{"removeVertex", (PyCFunction)KX_MeshBuilderSlot::sPyRemoveVertex, METH_VARARGS},
 	{"addPrimitiveIndex", (PyCFunction)KX_MeshBuilderSlot::sPyAddPrimitiveIndex, METH_O},
 	{"removePrimitiveIndex", (PyCFunction)KX_MeshBuilderSlot::sPyRemovePrimitiveIndex, METH_VARARGS},
@@ -77,7 +95,7 @@ PyMethodDef KX_MeshBuilderSlot::Methods[] = {
 
 PyAttributeDef KX_MeshBuilderSlot::Attributes[] = {
 	EXP_PYATTRIBUTE_RO_FUNCTION("vertices", KX_MeshBuilderSlot, pyattr_get_vertices),
-	EXP_PYATTRIBUTE_RO_FUNCTION("primitiveIndices", KX_MeshBuilderSlot, pyattr_get_primitiveIndices),
+	EXP_PYATTRIBUTE_RO_FUNCTION("indices", KX_MeshBuilderSlot, pyattr_get_indices),
 	EXP_PYATTRIBUTE_RO_FUNCTION("triangleIndices", KX_MeshBuilderSlot, pyattr_get_triangleIndices),
 	EXP_PYATTRIBUTE_RW_FUNCTION("material", KX_MeshBuilderSlot, pyattr_get_material, pyattr_set_material),
 	EXP_PYATTRIBUTE_RO_FUNCTION("uvCount", KX_MeshBuilderSlot, pyattr_get_uvCount),
@@ -85,6 +103,64 @@ PyAttributeDef KX_MeshBuilderSlot::Attributes[] = {
 	EXP_PYATTRIBUTE_RO_FUNCTION("primitive", KX_MeshBuilderSlot, pyattr_get_primitive),
 	EXP_PYATTRIBUTE_NULL // Sentinel
 };
+
+template <class ListType, ListType KX_MeshBuilderSlot::*List>
+int KX_MeshBuilderSlot::get_size_cb(void *self_v)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	return (self->*List).size();
+}
+
+PyObject *KX_MeshBuilderSlot::get_item_vertices_cb(void *self_v, int index)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	KX_VertexProxy *vert = new KX_VertexProxy(nullptr, RAS_Vertex(self->m_vertices[index], self->m_format));
+
+	return vert->NewProxy(true);
+}
+
+template <RAS_IDisplayArray::IndexList KX_MeshBuilderSlot::*List>
+PyObject *KX_MeshBuilderSlot::get_item_indices_cb(void *self_v, int index)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	return PyLong_FromLong((self->*List)[index]);
+}
+
+PyObject *KX_MeshBuilderSlot::pyattr_get_vertices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	return (new EXP_ListWrapper(self_v,
+		self->GetProxy(),
+		nullptr,
+		get_size_cb<decltype(KX_MeshBuilderSlot::m_vertices), &KX_MeshBuilderSlot::m_vertices>,
+		get_item_vertices_cb,
+		nullptr,
+		nullptr))->NewProxy(true);
+}
+
+PyObject *KX_MeshBuilderSlot::pyattr_get_indices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	return (new EXP_ListWrapper(self_v,
+		self->GetProxy(),
+		nullptr,
+		get_size_cb<decltype(KX_MeshBuilderSlot::m_primitiveIndices), &KX_MeshBuilderSlot::m_primitiveIndices>,
+		get_item_indices_cb<&KX_MeshBuilderSlot::m_primitiveIndices>,
+		nullptr,
+		nullptr))->NewProxy(true);
+}
+
+PyObject *KX_MeshBuilderSlot::pyattr_get_triangleIndices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
+{
+	KX_MeshBuilderSlot *self = static_cast<KX_MeshBuilderSlot *>(self_v);
+	return (new EXP_ListWrapper(self_v,
+		self->GetProxy(),
+		nullptr,
+		get_size_cb<decltype(KX_MeshBuilderSlot::m_triangleIndices), &KX_MeshBuilderSlot::m_triangleIndices>,
+		get_item_indices_cb<&KX_MeshBuilderSlot::m_triangleIndices>,
+		nullptr,
+		nullptr))->NewProxy(true);
+}
 
 PyObject *KX_MeshBuilderSlot::pyattr_get_material(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef)
 {
@@ -188,6 +264,32 @@ PyObject *KX_MeshBuilderSlot::PyAddVertex(PyObject *args, PyObject *kwds)
 	return PyLong_FromLong(m_vertices.size() - 1);
 }
 
+PyObject *KX_MeshBuilderSlot::PyAddIndex(PyObject *value)
+{
+	if (!PySequence_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "expected a list");
+		return nullptr;
+	}
+
+	const bool isTriangle = (m_primitive == RAS_IDisplayArray::TRIANGLES);
+
+	for (unsigned int i = 0, size = PySequence_Size(value); i < size; ++i) {
+		const int val = PyLong_AsLong(PySequence_GetItem(value, i));
+
+		if (val < 0 && PyErr_Occurred()) {
+			PyErr_Format(PyExc_TypeError, "expected a list of positive integer");
+			return nullptr;
+		}
+
+		m_primitiveIndices.push_back(val);
+		if (isTriangle) {
+			m_triangleIndices.push_back(val);
+		}
+	}
+
+	Py_RETURN_NONE;
+}
+
 PyObject *KX_MeshBuilderSlot::PyAddPrimitiveIndex(PyObject *value)
 {
 	if (!PySequence_Check(value)) {
@@ -228,6 +330,61 @@ PyObject *KX_MeshBuilderSlot::PyAddTriangleIndex(PyObject *value)
 	}
 
 	Py_RETURN_NONE;
+}
+
+template <class ListType>
+static PyObject *removeDataCheck(ListType& list, int start, int end, const std::string& errmsg)
+{
+	const int size = list.size();
+	if (start >= size || (end != -1 && (end > size || end < start))) {
+		PyErr_Format(PyExc_TypeError, "%s: range invalid, must be included in [0, %i[", errmsg.c_str(), size);
+		return nullptr;
+	}
+
+	if (end == -1) {
+		list.erase(list.begin() + start);
+	}
+	else {
+		list.erase(list.begin() + start, list.begin() + end);
+	}
+
+	Py_RETURN_NONE;
+}
+
+PyObject *KX_MeshBuilderSlot::PyRemoveVertex(PyObject *args)
+{
+	int start;
+	int end = -1;
+
+	if (!PyArg_ParseTuple(args, "i|i:removeVertex", &start, &end)) {
+		return nullptr;
+	}
+
+	return removeDataCheck(m_vertices, start, end, "slot.removeVertex(start, end)");
+}
+
+PyObject *KX_MeshBuilderSlot::PyRemovePrimitiveIndex(PyObject *args)
+{
+	int start;
+	int end = -1;
+
+	if (!PyArg_ParseTuple(args, "i|i:removePrimitiveIndex", &start, &end)) {
+		return nullptr;
+	}
+
+	return removeDataCheck(m_vertices, start, end, "slot.removePrimitiveIndex(start, end)");
+}
+
+PyObject *KX_MeshBuilderSlot::PyRemoveTriangleIndex(PyObject *args)
+{
+	int start;
+	int end = -1;
+
+	if (!PyArg_ParseTuple(args, "i|i:removeTriangleIndex", &start, &end)) {
+		return nullptr;
+	}
+
+	return removeDataCheck(m_vertices, start, end, "slot.removeTriangleIndex(start, end)");
 }
 
 KX_MeshBuilder::KX_MeshBuilder(KX_Scene *scene, const RAS_MeshObject::LayersInfo& layersInfo, const RAS_VertexFormat& format)
@@ -378,6 +535,14 @@ PyObject *KX_MeshBuilder::PyFinish()
 	if (m_slots.GetCount() == 0) {
 		PyErr_SetString(PyExc_TypeError, "meshBuilder.finish(): no mesh data found");
 		return nullptr;
+	}
+
+	for (KX_MeshBuilderSlot *slot : m_slots) {
+		if (slot->Invalid()) {
+			PyErr_Format(PyExc_TypeError, "meshBuilder.finish(): slot (%s) has an invalid number of vertices or indices",
+					slot->GetName().c_str());
+			return nullptr;
+		}
 	}
 
 	// TODO name

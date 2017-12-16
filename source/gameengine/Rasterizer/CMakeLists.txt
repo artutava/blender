@@ -85,6 +85,7 @@ set(SRC
 	RAS_TextureRenderer.cpp
 	RAS_TextUser.cpp
 	RAS_Vertex.cpp
+	RAS_VertexFactory.cpp
  
 	RAS_2DFilterData.h
 	RAS_2DFilter.h

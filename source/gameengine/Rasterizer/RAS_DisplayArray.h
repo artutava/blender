@@ -57,6 +57,17 @@ public:
 	{
 	}
 
+	RAS_DisplayArray(PrimitiveType type, const RAS_VertexFormat& format,
+		const IVertexDataList& vertices, const IndexList& primitiveIndices, const IndexList& triangleIndices)
+		:RAS_IDisplayArray(type, format, VertexData::GetMemoryFormat(), primitiveIndices, triangleIndices)
+	{
+		const unsigned int size = vertices.size();
+		m_vertexes.resize(size);
+		for (unsigned int i = 0; i < size; ++i) {
+			VertexData *data = static_cast<VertexData *>(vertices[i]);
+			m_vertexes[i] = *data;
+		}
+	}
 
 	virtual ~RAS_DisplayArray()
 	{

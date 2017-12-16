@@ -20,9 +20,9 @@ private:
 	RAS_VertexFormat m_format;
 	std::unique_ptr<RAS_IVertexFactory> m_factory;
 
-	std::vector<RAS_IVertexData *> m_vertices;
-	std::vector<unsigned int> m_primitiveIndices;
-	std::vector<unsigned int> m_triangleIndices;
+	RAS_IDisplayArray::IVertexDataList m_vertices;
+	RAS_IDisplayArray::IndexList m_primitiveIndices;
+	RAS_IDisplayArray::IndexList m_triangleIndices;
 
 public:
 	KX_MeshBuilderSlot(KX_BlenderMaterial *material, RAS_IDisplayArray::PrimitiveType primitiveType, const RAS_VertexFormat& format);
@@ -33,13 +33,22 @@ public:
 	KX_BlenderMaterial *GetMaterial() const;
 	void SetMaterial(KX_BlenderMaterial *material);
 
+	/// Return true if the number of vertices or indices doesn't match the primitive type used.
+	bool Invalid() const;
+
 	/// Create a display array with data contained in this slot.
 	RAS_IDisplayArray *GetDisplayArray() const;
 
 #ifdef WITH_PYTHON
 
+	template <class ListType, ListType KX_MeshBuilderSlot::*List>
+	static int get_size_cb(void *self_v);
+	static PyObject *get_item_vertices_cb(void *self_v, int index);
+	template <RAS_IDisplayArray::IndexList KX_MeshBuilderSlot::*List>
+	static PyObject *get_item_indices_cb(void *self_v, int index);
+
 	static PyObject *pyattr_get_vertices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
-	static PyObject *pyattr_get_primitiveIndices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_indices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static PyObject *pyattr_get_triangleIndices(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static PyObject *pyattr_get_material(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 	static int pyattr_set_material(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef, PyObject *value);
@@ -48,11 +57,12 @@ public:
 	static PyObject *pyattr_get_primitive(EXP_PyObjectPlus *self_v, const EXP_PYATTRIBUTE_DEF *attrdef);
 
 	EXP_PYMETHOD(KX_MeshBuilderSlot, AddVertex);
-	EXP_PYMETHOD(KX_MeshBuilderSlot, RemoveVertex);
+	EXP_PYMETHOD_VARARGS(KX_MeshBuilderSlot, RemoveVertex);
+	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddIndex);
 	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddPrimitiveIndex);
-	EXP_PYMETHOD(KX_MeshBuilderSlot, RemovePrimitiveIndex);
+	EXP_PYMETHOD_VARARGS(KX_MeshBuilderSlot, RemovePrimitiveIndex);
 	EXP_PYMETHOD_O(KX_MeshBuilderSlot, AddTriangleIndex);
-	EXP_PYMETHOD(KX_MeshBuilderSlot, RemoveTriangleIndex);
+	EXP_PYMETHOD_VARARGS(KX_MeshBuilderSlot, RemoveTriangleIndex);
 
 #endif  // WITH_PYTHON
 };

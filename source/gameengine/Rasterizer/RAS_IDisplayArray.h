@@ -66,6 +66,10 @@ public:
 		ANY_MODIFIED = MESH_MODIFIED | SIZE_MODIFIED | STORAGE_INVALID
 	};
 
+	using IndexList = std::vector<unsigned int>;
+	using IVertexDataList = std::vector<RAS_IVertexData *>;
+	using VertexInfoList = std::vector<RAS_VertexInfo>;
+
 protected:
 	/// The display array primitive type.
 	PrimitiveType m_type;
@@ -75,13 +79,13 @@ protected:
 	RAS_VertexDataMemoryFormat m_memoryFormat;
 
 	/// The vertex infos unused for rendering, e.g original or soft body index, flag.
-	std::vector<RAS_VertexInfo> m_vertexInfos;
+	VertexInfoList m_vertexInfos;
 	/// Cached vertex data pointers. This list is constructed with the function UpdateCache.
-	std::vector<RAS_IVertexData *> m_vertexDataPtrs;
+	IVertexDataList m_vertexDataPtrs;
 	/// The indices used for rendering.
-	std::vector<unsigned int> m_primitiveIndices;
+	IndexList m_primitiveIndices;
 	/// The indices of the original triangle independently of the primitive type.
-	std::vector<unsigned int> m_triangleIndices;
+	IndexList m_triangleIndices;
 
 	/// Maximum original vertex index.
 	unsigned int m_maxOrigIndex;
@@ -99,6 +103,8 @@ protected:
 public:
 	RAS_IDisplayArray(PrimitiveType type, const RAS_VertexFormat& format,
 			const RAS_VertexDataMemoryFormat& memoryFormat);
+	RAS_IDisplayArray(PrimitiveType type, const RAS_VertexFormat& format, const RAS_VertexDataMemoryFormat& memoryFormat,
+			const IndexList& primitiveIndices, const IndexList& triangleIndices);
 	virtual ~RAS_IDisplayArray();
 
 	virtual RAS_IDisplayArray *GetReplica() = 0;
@@ -110,8 +116,7 @@ public:
 	static RAS_IDisplayArray *Construct(PrimitiveType type, const RAS_VertexFormat &format);
 
 	static RAS_IDisplayArray *Construct(PrimitiveType type, const RAS_VertexFormat &format,
-			const std::vector<RAS_IVertexData *>& vertices, const std::vector<unsigned int>& primitiveIndices,
-			const std::vector<unsigned int>& triangleIndices);
+			const IVertexDataList& vertices, const IndexList& primitiveIndices, const IndexList& triangleIndices);
 
 	/** Return a vertex pointer without using the cache. Used to get
 	 * a vertex pointer during contruction.

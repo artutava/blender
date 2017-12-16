@@ -1,6 +1,8 @@
 #ifndef __RAS_VERTEX_FORMAT_H__
 #define __RAS_VERTEX_FORMAT_H__
 
+#include <tuple>
+
 /// Struct used to pass the vertex format to functions.
 struct RAS_VertexFormat
 {

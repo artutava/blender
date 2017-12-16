@@ -49,12 +49,18 @@ struct Main;
 
 struct BL_MeshMaterial {
 	RAS_IDisplayArray *array;
-	RAS_IVertexFactory *vertexFactory;
+	std::unique_ptr<RAS_IVertexFactory> vertexFactory;
 	RAS_MaterialBucket *bucket;
 	bool visible;
 	bool twoside;
 	bool collider;
 	bool wire;
+
+	BL_MeshMaterial() = default;
+	BL_MeshMaterial(RAS_IDisplayArray *array, RAS_IVertexFactory *factory, RAS_MaterialBucket *bucket,
+			bool visible, bool twoside, bool collider, bool wire);
+
+	BL_MeshMaterial& operator=(BL_MeshMaterial&& other) = default;
 };
 
 RAS_MeshObject *BL_ConvertMesh(Mesh *mesh, Object *lightobj, KX_Scene *scene, BL_BlenderSceneConverter& converter);

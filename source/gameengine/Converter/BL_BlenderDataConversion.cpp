@@ -177,6 +177,18 @@ extern Material defmaterial;
 
 #include "wm_event_types.h"
 
+BL_MeshMaterial::BL_MeshMaterial(RAS_IDisplayArray *_array, RAS_IVertexFactory *_factory, RAS_MaterialBucket *_bucket,
+		bool _visible, bool _twoside, bool _collider, bool _wire)
+	:array(_array),
+	vertexFactory(_factory),
+	bucket(_bucket),
+	visible(_visible),
+	twoside(_twoside),
+	collider(_collider),
+	wire(_wire)
+{
+}
+
 // For construction to find shared vertices.
 struct BL_SharedVertex {
 	RAS_IDisplayArray *array;
@@ -474,8 +486,8 @@ RAS_MeshObject *BL_ConvertMesh(Mesh *me, Object *blenderobj, KX_Scene *scene, BL
 		RAS_IPolyMaterial *mat = meshmat->GetBucket()->GetPolyMaterial();
 		RAS_IVertexFactory *factory = RAS_IVertexFactory::Construct(vertformat);
 
-		mats[i] = {meshmat->GetDisplayArray(), factory, bucket,
-				mat->IsVisible(), mat->IsTwoSided(), mat->IsCollider(), mat->IsWire()};
+		mats[i] = BL_MeshMaterial(meshmat->GetDisplayArray(), factory, bucket,
+				mat->IsVisible(), mat->IsTwoSided(), mat->IsCollider(), mat->IsWire());
 	}
 
 	BL_ConvertDerivedMeshToArray(dm, me, mats, layersInfo);
@@ -536,7 +548,7 @@ void BL_ConvertDerivedMeshToArray(DerivedMesh *dm, Mesh *me, const std::vector<B
 
 		const BL_MeshMaterial& mat = mats[mpoly.mat_nr];
 		RAS_IDisplayArray *array = mat.array;
-		RAS_IVertexFactory *factory = mat.vertexFactory;
+		RAS_IVertexFactory *factory = mat.vertexFactory.get();
 
 		// Mark face as flat, so vertices are split.
 		const bool flat = (mpoly.flag & ME_SMOOTH) == 0;

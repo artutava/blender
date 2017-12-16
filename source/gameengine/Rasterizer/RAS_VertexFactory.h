@@ -8,6 +8,9 @@
 class RAS_IVertexFactory
 {
 public:
+	RAS_IVertexFactory() = default;
+	virtual ~RAS_IVertexFactory() = default;
+
 	static RAS_IVertexFactory *Construct(const RAS_VertexFormat& format);
 
 	virtual RAS_IVertexData *CreateVertex(
@@ -27,13 +30,16 @@ public:
 	virtual void DeleteVertex(RAS_IVertexData *data) = 0;
 };
 
-template <class VertexData>
+template <class FormatType>
 class RAS_VertexFactory : public RAS_IVertexFactory
 {
+	using VertexData = RAS_VertexData<FormatType>;
 	// Temporary vertex data storage.
 	boost::object_pool<VertexData> m_vertexPool;
 
 public:
+	RAS_VertexFactory() = default;
+	virtual ~RAS_VertexFactory() = default;
 
 	virtual RAS_IVertexData *CreateVertex(
 				const mt::vec3& xyz,
