@@ -412,6 +412,10 @@ EXP_ListValue<KX_MeshBuilderSlot>& KX_MeshBuilder::GetSlots()
 
 static bool convertPythonListToLayers(PyObject *list, RAS_MeshObject::LayerList& layers, const std::string& errmsg)
 {
+	if (list == Py_None) {
+		return true;
+	}
+
 	if (!PySequence_Check(list)) {
 		PyErr_Format(PyExc_TypeError, "%s expected a list", errmsg.c_str());
 		return false;
@@ -441,8 +445,8 @@ static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	const char *name;
 	PyObject *pyscene;
-	PyObject *pyuvs;
-	PyObject *pycolors;
+	PyObject *pyuvs = Py_None;
+	PyObject *pycolors = Py_None;
 
 	if (!EXP_ParseTupleArgsAndKeywords(args, kwds, "sO|OO:KX_MeshBuilder",
 			{"name", "scene", "uvs", "colors", 0}, &name, &pyscene, &pyuvs, &pycolors))
@@ -462,7 +466,7 @@ static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		return nullptr;
 	}
 
-	RAS_VertexFormat format{(uint8_t)layersInfo.uvLayers.size(), (uint8_t)layersInfo.colorLayers.size()};
+	RAS_VertexFormat format{(uint8_t)max_ii(layersInfo.uvLayers.size(), 1), (uint8_t)max_ii(layersInfo.colorLayers.size(), 1)};
 
 	KX_MeshBuilder *builder = new KX_MeshBuilder(name, scene, layersInfo, format);
 
